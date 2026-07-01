@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Launcher Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        body { 
+            background: #000; 
+            color: white; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            overflow-x: hidden;
+        }
+        
+        /* Modal Styles */
+        .modal { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.95); 
+            display: none; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 100; 
+            padding: 20px; 
+            backdrop-filter: blur(5px);
+        }
+        .modal.active { display: flex; }
+        .modal-content { 
+            background: rgba(255,255,255,0.05); 
+            padding: 30px; 
+            border-radius: 20px; 
+            border: 1px solid rgba(255,255,255,0.1);
+            max-width: 400px;
+            width: 100%;
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .modal h2 { margin-bottom: 20px; text-align: center; font-size: 20px; font-weight: 600; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .modal input, .modal select { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 8px 0; 
+            border-radius: 10px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            background: rgba(255,255,255,0.08);
+            color: white;
+            font-size: 14px;
+        }
+        .modal input::placeholder { color: rgba(255,255,255,0.5); }
+        .modal input:focus, .modal select:focus { 
+            outline: none; 
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,170,0,0.5);
+        }
+        
+        .icon-picker { 
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 8px; 
+            margin: 15px 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .icon-option { 
+            aspect-ratio: 1; 
+            background: rgba(255,255,255,0.1); 
+            border: 2px solid transparent;
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            font-size: 20px;
+            transition: 0.2s;
+        }
+        .icon-option:hover { background: rgba(255,255,255,0.15); }
+        .icon-option.selected { border-color: #ffae00; background: rgba(255,170,0,0.2); }
+        
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-buttons button { flex: 1; }
+        
+        #background { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: -3; 
+            background: radial-gradient(circle at center, rgba(255,170,0,.15), transparent 40%), #000; 
+        }
+        
+        .clock { margin-top: 40px; text-align: center; }
+        #hora { font-size: 50px; font-weight: 200; font-variant-numeric: tabular-nums; }
+        #data-completa { font-size: 14px; color: #aaa; margin-top: 8px; text-transform: capitalize; }
+        #temperatura { font-size: 13px; color: #ffae00; margin-top: 4px; }
+        
+        .search { width: 90%; max-width: 500px; margin: 20px 0; display: flex; gap: 8px; }
+        .search input { 
+            flex: 1;
+            padding: 13px 18px; 
+            border-radius: 30px; 
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,.08); 
+            color: white; 
+            text-align: left; 
+            backdrop-filter: blur(10px); 
+            font-size: 15px;
+            transition: 0.2s;
+        }
+        .search input:focus { 
+            outline: none; 
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,170,0,0.5);
+        }
+        .search button {
+            padding: 13px 20px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,170,0,0.2);
+            color: #ffae00;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .search button:hover { background: rgba(255,170,0,0.3); }
+        
+        /* Categorias */
+        .category-tabs {
+            display: flex;
+            gap: 10px;
+            width: 90%;
+            max-width: 600px;
+            margin: 15px 0;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scroll-behavior: smooth;
+        }
+        .category-tabs::-webkit-scrollbar { height: 4px; }
+        .category-tabs::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .category-tabs::-webkit-scrollbar-thumb { background: rgba(255,170,0,0.3); border-radius: 10px; }
+        
+        .category-tab { 
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #aaa;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+        .category-tab:hover { background: rgba(255,255,255,0.15); }
+        .category-tab.active { 
+            background: rgba(255,170,0,0.2);
+            border-color: #ffae00;
+            color: #ffae00;
+        }
+        
+        .tiles { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); 
+            gap: 12px; 
+            width: 90%; 
+            max-width: 600px; 
+            margin-top: 10px; 
+            padding-bottom: 120px;
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .tile { 
+            aspect-ratio: 1 / 1; 
+            background: rgba(255,255,255,.08); 
+            border-radius: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            cursor: pointer; 
+            border: 2px solid transparent; 
+            transition: .2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .tile:hover { 
+            background: rgba(255,255,255,.12);
+            transform: translateY(-2px);
+        }
+        .tile.modo-excluir { 
+            border-color: #ff4444; 
+            animation: tremer 0.3s infinite; 
+        }
+        .tile.modo-excluir:hover { background: rgba(255,68,68,0.15); }
+        @keyframes tremer { 0% { transform: rotate(2deg); } 50% { transform: rotate(-2deg); } }
+        
+        .tile img { 
+            width: 40px; 
+            height: 40px; 
+            margin-bottom: 6px; 
+            pointer-events: none;
+            border-radius: 8px;
+        }
+        .tile .emoji-icon { font-size: 32px; margin-bottom: 4px; }
+        .tile span { 
+            font-size: 11px; 
+            text-align: center; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+            width: 90%;
+            color: #ddd;
+        }
+        .tile .edit-btn { 
+            position: absolute; 
+            top: 5px; 
+            right: 5px; 
+            background: rgba(255,170,0,0.8);
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0;
+            transition: 0.2s;
+            z-index: 5;
+        }
+        .tile:hover .edit-btn { opacity: 1; }
+        
+        .add-tile {
+            font-size: 32px;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .backup-btns { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            width: 100%; 
+            display: flex; 
+            gap: 8px; 
+            justify-content: center; 
+            padding: 15px; 
+            background: rgba(0,0,0,0.9); 
+            backdrop-filter: blur(10px); 
+            z-index: 10; 
+            border-top: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap;
+        }
+        
+        button { 
+            background: rgba(255,255,255,0.15); 
+            color: white; 
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 14px; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            font-size: 12px;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+        button:hover { 
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.3);
+        }
+        button.delete-mode { background: rgba(255,68,68,0.2); color: #ff6b6b; }
+        button.delete-mode:hover { background: rgba(255,68,68,0.3); }
+        
+        input[type="file"] { display: none; }
+        
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,170,0,0.3);
+            font-size: 13px;
+            animation: slideInUp 0.3s ease-out;
+            z-index: 11;
+        }
+        @keyframes slideInUp { from { transform: translateX(-50%) translateY(30px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        
+        /* Responsivo */
+        @media (max-width: 600px) {
+            .tiles { grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 10px; }
+            #hora { font-size: 40px; }
+            .modal-content { padding: 20px; }
+            .backup-btns { padding: 12px; gap: 6px; }
+            button { padding: 8px 12px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Modal para novo atalho -->
+<div class="modal" id="novoModal">
+    <div class="modal-content">
+        <h2>Novo Atalho</h2>
+        <div class="form-group">
+            <label>Nome</label>
+            <input type="text" id="novoNome" placeholder="Ex: Google">
+        </div>
+        <div class="form-group">
+            <label>URL</label>
+            <input type="url" id="novaUrl" placeholder="https://google.com">
+        </div>
+        <div class="form-group">
+            <label>Categoria</label>
+            <select id="novaCategoria"></select>
+        </div>
+        <div class="form-group">
+            <label>Ícone</label>
+            <div class="icon-picker" id="iconPicker"></div>
+            <input type="text" id="customIcon" placeholder="Ou Cole emoji aqui" style="margin-top: 8px;">
+        </div>
+        <div class="modal-buttons">
+            <button onclick="salvarNovo()" style="background: rgba(255,170,0,0.3); color: #ffae00;">Salvar</button>
+            <button onclick="fecharModal('novoModal')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar atalho -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <h2>Editar Atalho</h2>
+        <div class="form-group">
+            <label>Nome</label>
+            <input type="text" id="editNome" placeholder="Ex: Google">
+        </div>
+        <div class="form-group">
+            <label>URL</label>
+            <input type="url" id="editUrl" placeholder="https://google.com">
+        </div>
+        <div class="form-group">
+            <label>Categoria</label>
+            <select id="editCategoria"></select>
+        </div>
+        <div class="form-group">
+            <label>Ícone</label>
+            <div class="icon-picker" id="editIconPicker"></div>
+            <input type="text" id="editCustomIcon" placeholder="Ou Cole emoji aqui" style="margin-top: 8px;">
+        </div>
+        <div class="modal-buttons">
+            <button onclick="salvarEdicao()" style="background: rgba(255,170,0,0.3); color: #ffae00;">Salvar</button>
+            <button onclick="fecharModal('editModal')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="background"></div>
+
+<div class="clock">
+    <div id="hora">00:00:00</div>
+    <div id="data-completa"></div>
+    <div id="temperatura">Carregando clima...</div>
+</div>
+
+<div class="search">
+    <input id="pesquisa" placeholder="Pesquisar na Web...">
+    <button onclick="buscarWeb()">🔍</button>
+</div>
+
+<div class="category-tabs" id="categoryTabs"></div>
+<div class="tiles" id="tiles"></div>
+
+<div class="backup-btns">
+    <button onclick="alternarModo()" id="btnModoExcluir">Modo Excluir</button>
+    <button onclick="novoAtalho()">➕ Novo</button>
+    <button onclick="exportarBackup()">📥 Exportar</button>
+    <button onclick="document.getElementById('importFile').click()">📤 Importar</button>
+    <input type="file" id="importFile" accept=".json" onchange="importarBackup(event)">
+</div>
+
+<script>
+    // Ícones disponíveis
+    const EMOJIS = ['🔍', '🌐', '📧', '📱', '💼', '🎮', '🎵', '📺', '🎥', '📷', '🛍️', '📚', '⚙️', '🔐', '🎨', '📊', '💰', '🏃', '🍔', '☁️'];
+    
+    // Estado da aplicação
+    let links = JSON.parse(localStorage.getItem('minhaLauncher')) || [];
+    let categorias = JSON.parse(localStorage.getItem('categorias')) || ['Favoritos', 'Trabalho', 'Diversão', 'Educação', 'Ferramentas'];
+    let categoriaAtiva = 'Todos';
+    let estaEmModoExcluir = false;
+    let editandoIndex = null;
+
+    // Inicialização
+    function init() {
+        popularEmojis();
+        renderizarCategorias();
+        renderizar();
+        buscarClima();
+        atualizarHora();
+        setInterval(atualizarHora, 1000);
+        
+        // Atalho de teclado: "/" para focar no search
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '/' && document.activeElement !== document.getElementById('pesquisa')) {
+                e.preventDefault();
+                document.getElementById('pesquisa').focus();
+            }
+        });
+        
+        // Enter no search
+        document.getElementById('pesquisa').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') buscarWeb();
+        });
+    }
+
+    function popularEmojis() {
+        const picker = document.getElementById('iconPicker');
+        const editPicker = document.getElementById('editIconPicker');
+        picker.innerHTML = '';
+        editPicker.innerHTML = '';
+        
+        EMOJIS.forEach(emoji => {
+            const div = document.createElement('div');
+            div.className = 'icon-option';
+            div.textContent = emoji;
+            div.onclick = () => selecionarEmoji('novoModal', emoji);
+            picker.appendChild(div);
+            
+            const editDiv = div.cloneNode(true);
+            editDiv.onclick = () => selecionarEmoji('editModal', emoji);
+            editPicker.appendChild(editDiv);
+        });
+    }
+
+    function selecionarEmoji(modal, emoji) {
+        const inputId = modal === 'novoModal' ? 'customIcon' : 'editCustomIcon';
+        document.getElementById(inputId).value = emoji;
+        document.querySelectorAll(`#${modal} .icon-option`).forEach(el => el.classList.remove('selected'));
+        event.target.classList.add('selected');
+    }
+
+    function renderizarCategorias() {
+        const container = document.getElementById('categoryTabs');
+        container.innerHTML = '';
+        
+        const todosBtn = document.createElement('button');
+        todosBtn.className = 'category-tab' + (categoriaAtiva === 'Todos' ? ' active' : '');
+        todosBtn.textContent = 'Todos';
+        todosBtn.onclick = () => {
+            categoriaAtiva = 'Todos';
+            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            todosBtn.classList.add('active');
+            renderizar();
+        };
+        container.appendChild(todosBtn);
+        
+        categorias.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = 'category-tab' + (categoriaAtiva === cat ? ' active' : '');
+            btn.textContent = cat;
+            btn.onclick = () => {
+                categoriaAtiva = cat;
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+                renderizar();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    function renderizar() {
+        const container = document.getElementById("tiles");
+        container.innerHTML = '';
+        
+        // Botão de adicionar
+        const addTile = document.createElement("div");
+        addTile.className = "tile add-tile";
+        addTile.textContent = "+";
+        addTile.onclick = novoAtalho;
+        container.appendChild(addTile);
+        
+        // Filtrar links
+        const linksFiltrados = categoriaAtiva === 'Todos' 
+            ? links 
+            : links.filter(l => l.categoria === categoriaAtiva);
+        
+        linksFiltrados.forEach((l, index) => {
+            const realIndex = links.indexOf(l);
+            const div = document.createElement("div");
+            div.className = "tile" + (estaEmModoExcluir ? " modo-excluir" : "");
+            
+            let iconHtml = '';
+            if (l.icon && l.icon.length <= 2) {
+                iconHtml = `<div class="emoji-icon">${l.icon}</div>`;
+            } else {
+                const url = new URL(l.url).hostname;
+                iconHtml = `<img src="https://www.google.com/s2/favicons?domain=${url}&sz=64" onerror="this.style.display='none'">`;
+            }
+            
+            div.innerHTML = `
+                ${estaEmModoExcluir ? '' : `<button class="edit-btn" onclick="abrirEdicao(${realIndex})">✎</button>`}
+                ${iconHtml}
+                <span>${l.name}</span>
+            `;
+            
+            div.onclick = (e) => {
+                if (e.target.classList.contains('edit-btn') || estaEmModoExcluir === false && e.target.closest('.edit-btn')) return;
+                if (estaEmModoExcluir) {
+                    if (confirm(`Remover "${l.name}"?`)) {
+                        links.splice(realIndex, 1);
+                        salvar();
+                    }
+                } else {
+                    window.open(l.url, "_blank");
+                }
+            };
+            
+            container.appendChild(div);
+        });
+    }
+
+    function novoAtalho() {
+        editandoIndex = null;
+        document.getElementById('novoNome').value = '';
+        document.getElementById('novaUrl').value = '';
+        document.getElementById('customIcon').value = '';
+        document.getElementById('novaCategoria').value = categorias[0] || 'Favoritos';
+        abrirModal('novoModal');
+    }
+
+    function salvarNovo() {
+        const n = document.getElementById('novoNome').value.trim();
+        const u = document.getElementById('novaUrl').value.trim();
+        const icon = document.getElementById('customIcon').value.trim();
+        const cat = document.getElementById('novaCategoria').value;
+        
+        if (!n || !u) {
+            mostrarToast('Preencha nome e URL');
+            return;
+        }
+        
+        if (!u.startsWith('http')) {
+            mostrarToast('URL deve começar com http ou https');
+            return;
+        }
+        
+        links.push({ name: n, url: u, icon: icon, categoria: cat });
+        fecharModal('novoModal');
+        salvar();
+        mostrarToast('Atalho adicionado!');
+    }
+
+    function abrirEdicao(index) {
+        editandoIndex = index;
+        const l = links[index];
+        document.getElementById('editNome').value = l.name;
+        document.getElementById('editUrl').value = l.url;
+        document.getElementById('editCustomIcon').value = l.icon || '';
+        document.getElementById('editCategoria').value = l.categoria || categorias[0];
+        abrirModal('editModal');
+    }
+
+    function salvarEdicao() {
+        const n = document.getElementById('editNome').value.trim();
+        const u = document.getElementById('editUrl').value.trim();
+        const icon = document.getElementById('editCustomIcon').value.trim();
+        const cat = document.getElementById('editCategoria').value;
+        
+        if (!n || !u) {
+            mostrarToast('Preencha nome e URL');
+            return;
+        }
+        
+        if (!u.startsWith('http')) {
+            mostrarToast('URL deve começar com http ou https');
+            return;
+        }
+        
+        links[editandoIndex] = { name: n, url: u, icon: icon, categoria: cat };
+        fecharModal('editModal');
+        salvar();
+        mostrarToast('Atalho atualizado!');
+    }
+
+    function abrirModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+
+    function fecharModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    function ordenarLinks() {
+        links.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+    }
+
+    function salvar() {
+        ordenarLinks();
+        localStorage.setItem('minhaLauncher', JSON.stringify(links));
+        localStorage.setItem('categorias', JSON.stringify(categorias));
+        renderizar();
+    }
+
+    function alternarModo() {
+        estaEmModoExcluir = !estaEmModoExcluir;
+        document.getElementById('btnModoExcluir').classList.toggle('delete-mode', estaEmModoExcluir);
+        renderizar();
+    }
+
+    function buscarWeb() {
+        const query = document.getElementById('pesquisa').value.trim();
+        if (query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
+            document.getElementById('pesquisa').value = '';
+        }
+    }
+
+    function atualizarHora() {
+        const agora = new Date();
+        document.getElementById('hora').textContent = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        const opcoes = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const dataFormatada = agora.toLocaleDateString('pt-BR', opcoes);
+        document.getElementById('data-completa').textContent = dataFormatada;
+    }
+
+    async function buscarClima() {
+        const el = document.getElementById('temperatura');
+        const buscar = async (lat, lon) => {
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`);
+                const data = await res.json();
+                const temp = Math.round(data.current.temperature_2m);
+                el.textContent = `📍 ${temp}°C`;
+            } catch {
+                el.textContent = '🌍 Clima indisponível';
+            }
+        };
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => buscar(pos.coords.latitude, pos.coords.longitude),
+                () => buscar(-25.4284, -49.2733) // Curitiba fallback
+            );
+        } else {
+            buscar(-25.4284, -49.2733);
+        }
+    }
+
+    function exportarBackup() {
+        const backup = {
+            links: links,
+            categorias: categorias,
+            exportedAt: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `launcher-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        mostrarToast('Backup exportado!');
+    }
+
+    function importarBackup(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                
+                if (data.links && Array.isArray(data.links)) {
+                    links = data.links;
+                    if (data.categorias && Array.isArray(data.categorias)) {
+                        categorias = data.categorias;
+                    }
+                    salvar();
+                    renderizarCategorias();
+                    mostrarToast('Backup importado com sucesso!');
+                } else {
+                    mostrarToast('Formato de arquivo inválido!');
+                }
+            } catch {
+                mostrarToast('Erro ao importar arquivo!');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function mostrarToast(msg) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    // Popular dropdowns
+    function atualizarDropdowns() {
+        const novaCategoria = document.getElementById('novaCategoria');
+        const editCategoria = document.getElementById('editCategoria');
+        
+        novaCategoria.innerHTML = categorias.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        editCategoria.innerHTML = categorias.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    }
+
+    // Atalho: Ctrl+N para novo
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            novoAtalho();
+        }
+    });
+
+    // Iniciar
+    atualizarDropdowns();
+    init();
+</script>
+
+</body>
+</html>
